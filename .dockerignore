@@ -1,0 +1,9 @@
+.git
+.github
+.vscode
+.venv
+.gitignore
+Makefile
+README.md
+__pycache__/
+setup.cfg

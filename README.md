@@ -1,2 +1,1 @@
-# Telegram-store
-Online store based on telegram bot
+# bot_2
