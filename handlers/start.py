@@ -4,7 +4,7 @@ from aiogram.types import Message, ReplyKeyboardMarkup, ReplyKeyboardRemove, Key
 import aiofiles
 from loguru import logger
 
-from crud import db_api
+from crud import catalogs, users
 from app import dp
 from utils import get_text, is_promo_active
 
@@ -25,9 +25,9 @@ logger.add(
 @logger.catch
 @dp.message_handler(commands='start')
 async def cmd_start(message: Message):
-    await db_api.start_count_data()
+    await catalogs.start_count_data()
     tg_id = message.chat.id
-    user_info = await db_api.get_user(tg_id)
+    user_info = await users.get_user(tg_id)
     if user_info is False:
         username = message.from_user.username
         args = message.get_args()
@@ -35,26 +35,24 @@ async def cmd_start(message: Message):
             source = args.split('-')[1]
         else:
             source = None
-        await db_api.add_user(tg_id, username, source)
+        await users.add_user(tg_id, username, source)
         logger.info(f'User {tg_id} зарегистрировался, источник - {source}')
-        await db_api.add_log(tg_id, 'registration')
-        user_info = await db_api.get_user(tg_id)
-    await db_api.add_log(tg_id, 'start')
+        user_info = await users.get_user(tg_id)
     balance = user_info.balance
     current_language = user_info.language
     text = get_text('greeting', current_language)
     catalog = get_text('catalog', current_language)
     pay = get_text('balance', current_language)
-    rows = await db_api.give_all_rows()
+    rows = await catalogs.give_all_rows()
 
     if current_language == 'en':
         bal = f"💰Your balance: {balance}$"
-        stock = f'{rows} motorbikes 🏍'
+        stock = f'{rows} motorbikes🏍'
     else:
-        bal = f"💰Ваш баланс: {balance}$"
-        stock = f'{rows} мотоциклов 🏍'
+        bal = f"💰Твой баланс: {balance}$"
+        stock = f'{rows} мотоциклов🏍'
 
-    mess = f'{text}\n{stock}\n\n{bal}'
+    mess = f'{text}{stock}\n\n{bal}'
     markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     catalog_b = KeyboardButton(catalog)
     switch_b = KeyboardButton("🇷🇺RU/EN🇺🇸")
@@ -69,12 +67,12 @@ async def cmd_start(message: Message):
 @dp.message_handler(text="🇷🇺RU/EN🇺🇸")
 async def switch_language(message: Message):
     tg_id = message.chat.id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     if current_language == 'en':
         new_lang = 'ru'
     else:
         new_lang = 'en'
-    await db_api.update_user_language(tg_id, new_lang)
+    await users.update_user_language(tg_id, new_lang)
     text = get_text('switch', new_lang)
     await message.answer(text,
                          reply_markup=ReplyKeyboardRemove())
@@ -87,7 +85,7 @@ async def user_help(message: Message):
     mess = '''По особым запросам обращайтесь к администратору:
 @username
 For special requests, please contact the administrator:
-@Vaanry
+@username
 '''
     await message.reply(mess)
 
@@ -96,7 +94,7 @@ For special requests, please contact the administrator:
 @dp.message_handler(regexp='.*О нас|.*About us')
 async def about(message: Message):
     tg_id = message.chat.id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     text = get_text('about_descr', current_language)
     await message.answer(text)
 
@@ -105,8 +103,7 @@ async def about(message: Message):
 @dp.message_handler(commands='free')
 async def cmd_free(message: Message):
     tg_id = message.chat.id
-    await db_api.add_log(tg_id, 'free')
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     status = await is_promo_active(tg_id)
     logger.info(f'User {tg_id} жмёт free')
     if status == 'No promo':
@@ -129,8 +126,8 @@ async def my_chat_member_handler(message: ChatMemberUpdated):
     tg_id = message.chat.id
     if message.chat.type == 'private':
         if message.new_chat_member.status == "kicked":
-            await db_api.update_block_bot_status(tg_id, True)
+            await users.update_block_bot_status(tg_id, True)
             logger.info(f'User {tg_id} заблокировал бота')
         elif message.new_chat_member.status == "member":
-            await db_api.update_block_bot_status(tg_id, False)
+            await users.update_block_bot_status(tg_id, False)
             logger.info(f'User {tg_id} разблокировал бота')

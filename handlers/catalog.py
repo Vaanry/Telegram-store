@@ -5,7 +5,7 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.types import CallbackQuery
 from loguru import logger
 
-from crud import db_api
+from crud import catalogs, users, orders
 from app import dp
 from utils import get_text, output_format, get_order_format
 
@@ -27,12 +27,12 @@ class Order(StatesGroup):
 @dp.message_handler(regexp='.*Каталог|.*Catalog')
 async def catalog(message: Message, state: FSMContext):
     markup = InlineKeyboardMarkup()
-    categories = await db_api.get_categories()
+    categories = await catalogs.get_categories()
     for category in sorted(categories):
         markup.add(InlineKeyboardButton(
             category, callback_data=category_cb.new(name=category, action='view')))
     tg_id = message.chat.id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     text = get_text('category', current_language)
     await message.answer(text, reply_markup=markup)
     logger.debug(f'User {tg_id}: catalog')
@@ -48,12 +48,12 @@ async def process_category_back(callback: CallbackQuery, state: FSMContext):
 async def country_callback_handler(query: CallbackQuery, callback_data: dict, state: FSMContext):
     category_name = callback_data['name']
     markup = InlineKeyboardMarkup(row_width=2)
-    countries = await db_api.get_countries_by_category(category_name)
+    countries = await catalogs.get_countries_by_category(category_name)
     buttons = [InlineKeyboardButton(
         country, callback_data=country_cb.new(name=country, action='view')) for country in sorted(countries)]
     markup.add(*buttons)
     tg_id = query.from_user.id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     text = get_text('country', current_language)
     back = get_text('back', current_language)
     markup.add(InlineKeyboardButton(back, callback_data='Back'))
@@ -71,12 +71,12 @@ async def mark_callback_handler(query: CallbackQuery, callback_data: dict, state
 
     country = callback_data['name']
     markup = InlineKeyboardMarkup(row_width=4)
-    types = await db_api.get_manufactorers_by_category(category_name, country)
+    types = await catalogs.get_manufactorers_by_category(category_name, country)
     for name in types:
         markup.add(InlineKeyboardButton(
             name, callback_data=mark_cb.new(name=name, action='view')))
     tg_id = query.from_user.id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     text = get_text('mark', current_language)
     back = get_text('back', current_language)
     markup.add(InlineKeyboardButton(back, callback_data=category_cb.new(name=category_name, action='view')))
@@ -94,12 +94,12 @@ async def model_callback_handler(query: CallbackQuery, callback_data: dict, stat
 
     mark = callback_data['name']
     markup = InlineKeyboardMarkup(row_width=4)
-    types = await db_api.get_models_by_mark(category_name, mark)
+    types = await catalogs.get_models_by_mark(category_name, mark)
     for name in types:
         markup.add(InlineKeyboardButton(
             name.model, callback_data=model_cb.new(name=name.model, action='view')))
     tg_id = query.from_user.id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     text = get_text('model', current_language)
     back = get_text('back', current_language)
     markup.add(InlineKeyboardButton(back, callback_data=category_cb.new(name=category_name, action='view')))
@@ -119,11 +119,11 @@ async def material_callback_handler(query: CallbackQuery, callback_data: dict, s
 
     model = callback_data['name']
     tg_id = query.from_user.id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     markup = InlineKeyboardMarkup(row_width=2)
     back = get_text('back', current_language)
 
-    bike = await db_api.get_store(model)
+    bike = await catalogs.get_store(model)
     sort_type = bike.sort_type
     catalog = " ---> ".join([country, mark, model])
     await state.update_data(model=model, catalog=catalog)
@@ -140,7 +140,7 @@ async def material_callback_handler(query: CallbackQuery, callback_data: dict, s
         await query.message.answer(text, reply_markup=markup)
 
     else:
-        all_prices = await db_api.get_prices(model)
+        all_prices = await catalogs.get_prices(model)
         prices = [price for price in all_prices if price is not None]
         buttons = [InlineKeyboardButton(
             name, callback_data=price_cb.new(name=name, action='view')) for name in sorted(prices) if name is not None and name != 'NaN']
@@ -152,7 +152,7 @@ async def material_callback_handler(query: CallbackQuery, callback_data: dict, s
 
 @logger.catch
 async def vollume_handler(model, markup, back, country):
-    all_states = await db_api.get_vollumes(model)
+    all_states = await catalogs.get_vollumes(model)
     vollumes = [state for state in all_states if state is not None]
     buttons = [InlineKeyboardButton(
         name, callback_data=cc_cb.new(name=name, action='view')) for name in sorted(vollumes) if name is not None and name != 'NaN']
@@ -162,7 +162,7 @@ async def vollume_handler(model, markup, back, country):
 
 @logger.catch
 async def age_handler(model, markup, back, country):
-    ages = await db_api.get_ages(model)
+    ages = await catalogs.get_ages(model)
     markup.add(InlineKeyboardButton(
         'Mix', callback_data=age_cb.new(name='Mix', action='view')))
     for age in sorted(ages):
@@ -182,13 +182,13 @@ async def vollume_age_callback_handler(query: CallbackQuery, callback_data: dict
 
     age = callback_data['name']
     markup = InlineKeyboardMarkup(row_width=4)
-    all_vollumes = await db_api.get_vollumes(model, age=age)
+    all_vollumes = await catalogs.get_vollumes(model, age=age)
     vollumes = [cc for cc in all_vollumes if state is not None]
     buttons = [InlineKeyboardButton(
         name, callback_data=cc_cb.new(name=name, action='view')) for name in sorted(vollumes) if name is not None and name != 'NaN']
     markup.add(*buttons)
     tg_id = query.from_user.id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     text = get_text('vollume', current_language)
     back = get_text('back', current_language)
     markup.add(InlineKeyboardButton(back, callback_data=country_cb.new(name=country, action='view')))
@@ -206,12 +206,12 @@ async def price_handler(query: CallbackQuery, callback_data: dict, state: FSMCon
         model = data['model']
 
     markup = InlineKeyboardMarkup(row_width=4)
-    prices = await db_api.get_prices(model, cc=cc, age=age)
+    prices = await catalogs.get_prices(model, cc=cc, age=age)
     buttons = [InlineKeyboardButton(
         name, callback_data=price_cb.new(name=name, action='view')) for name in sorted(prices) if name is not None and name != 'NaN']
     markup.add(*buttons)
     tg_id = query.from_user.id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     text = get_text('price', current_language)
     back = get_text('back', current_language)
     markup.add(InlineKeyboardButton(back, callback_data=model_cb.new(name=model, action='view')))
@@ -229,9 +229,9 @@ async def choose_handler(query: CallbackQuery, callback_data: dict, state: FSMCo
         age = data.get('age')
         cc = data.get('cc')
 
-    quantity = await db_api.get_items_quantity(model, price, cc, age)
+    quantity = await catalogs.get_items_quantity(model, price, cc, age)
     tg_id = query.from_user.id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     text_format = output_format(catalog, quantity, current_language)
     price_text = get_text("price_choosen", current_language)
     text_format += f'{price_text} - {price}'
@@ -261,7 +261,7 @@ async def process_submit(message: Message, state: FSMContext):
     async with state.proxy() as data:
         quantity = data['quantity']
     tg_id = message.from_user.id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     logger.debug(f'User {tg_id}: process_submit: {message.text}')
     try:
         amount = int(message.text)
@@ -283,7 +283,7 @@ async def process_submit(message: Message, state: FSMContext):
             purchase = amount * float(price)
             order, submit = get_order_format(current_language, amount, purchase, text_format)
             back = get_text('back', current_language)
-            await db_api.add_order(tg_id, amount, model, purchase, age, cc)
+            await orders.add_order(tg_id, amount, model, purchase, cc, age)
             markup = InlineKeyboardMarkup(row_width=2)
             submit_button = InlineKeyboardButton(submit, callback_data='submit_buy')
             back_batton = InlineKeyboardButton(back, callback_data='Back')

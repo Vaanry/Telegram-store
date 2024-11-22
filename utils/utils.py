@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from aiogram.utils.exceptions import RetryAfter, ChatNotFound, BotBlocked, UserDeactivated
 
 from config import bot
-from crud import db_api
+from crud import admins, users
 from .lexicons import LEXICON
 
 env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
@@ -54,7 +54,8 @@ async def process_file(path, query, order_text, new_path):
         await query.message.answer_document(document=file, caption=order_text)
     path_existence = await aiofiles.os.path.exists(path)
     if path_existence:
-        await aioshutil.move(path, new_path)
+      # await aioshutil.move(path, new_path) prod
+        await aioshutil.copy(path, new_path)  # debug
 
 
 @logger.catch
@@ -88,8 +89,8 @@ async def process_users(users):
 @logger.catch
 async def process_orders(username, user_orders):
     filename = os.path.join(logs_path, f'{username}.csv')
-    columns = ['Order type', 'Order archive']
-    data = [[order.order_type, order.order_archive] for order in user_orders]
+    columns = ['Model', 'Purchase', 'Order archive']
+    data = [[order.model, order.purchase, order.order_archive] for order in user_orders]
     async with aiofiles.open(filename, mode="w", encoding="utf-8", newline="") as file:
         writer = AsyncWriter(file, dialect="unix")
         await writer.writerow(columns)
@@ -106,13 +107,13 @@ async def bot_send_message(tg_id, mess_text):
         await asyncio.sleep(e.timeout)
         await bot_send_message(tg_id, mess_text)
     except ChatNotFound:
-        await db_api.update_active_status(tg_id, False)
+        await users.update_active_status(tg_id, False)
         logger.error(f"Чата {tg_id} больше нет")
     except UserDeactivated:
-        await db_api.update_active_status(tg_id, False)
+        await users.update_active_status(tg_id, False)
         logger.error(f"Пользователя {tg_id} больше нет")
     except BotBlocked as e:
-        await db_api.update_block_bot_status(tg_id, True)
+        await users.update_block_bot_status(tg_id, True)
         logger.error(f"Пользователь {tg_id} заблокировал бота: {e}")
     except Exception as e:
         logger.error(f"Отправка сообщения {tg_id} не удалась: {e}, {type(e)}")
@@ -126,6 +127,6 @@ def balance_replenished(amount, current_language):
 
 
 async def notify_admins(text):
-    admins = await db_api.get_admins()
-    tasks = [asyncio.create_task(bot_send_message(user, text)) for user in admins]
+    admins_ = await admins.get_admins()
+    tasks = [asyncio.create_task(bot_send_message(user, text)) for user in admins_]
     await asyncio.gather(*tasks)

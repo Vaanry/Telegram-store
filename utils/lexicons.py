@@ -1,16 +1,14 @@
 LEXICON = {
     'ru': {
-        "greeting": """Привет❗️
-
-В наличии:""",
+        "greeting": """Привет❗️В наличии """,
         "catalog": "🗂Каталог",
         "switch":
         """Язык был изменен! 🇷🇺
 Используйте /start, чтобы перезапустить бота.""",
 
-        "country": "Выбери страну:",
+        "category": "Выберите класс мотоцикла:",
 
-        "category": "Выбери тип мотоцикла:",
+        "country": "Выбери страну:",
 
         "mark": "Выберите марку мотоцикла:",
 
@@ -38,7 +36,6 @@ LEXICON = {
 
         "pay_link": 'Ваша ссылка на оплату.\n❗️<b><u>Внимание</u></b>❗️ Ссылка действительна 24 часа.',
 
-
         "pay_confirm": "👌 Ваш платеж был успешно зачислен!",
 
         "back": '⬅️Назад',
@@ -59,7 +56,7 @@ LEXICON = {
 
         'incorrect input': "Некорректное значение!",
 
-        'order_text': '📎Твой товар',
+        'order_text': '🏍Твой мотоцикл',
 
         'funds': 'Недостаточно средств',
 
@@ -67,7 +64,8 @@ LEXICON = {
 
         'about': 'ℹ️О нас',
 
-        'about_descr': '''aaaa''',
+        'about_descr': '''Это тестовый интернет-магазин, реализованный в телеграм-боте. Здесь мы "торгуем" мотоциклами
+(а на самом деле, это только картинки мотоциклов, только тссс!😉)''',
 
         'Expired': 'К сожалению, промо-акция закончилась 😞',
 
@@ -78,9 +76,7 @@ LEXICON = {
     },
     'en': {
 
-        "greeting": """Hello❗️
-
-Available: """,
+        "greeting": """Hello❗️Available """,
 
         "catalog": "🗂Catalog",
 
@@ -88,8 +84,9 @@ Available: """,
 Use /start to restart bot.
     """,
 
-
         "country": "Choose country:",
+
+        "category": "Choose motorbike class:",
 
         "mark": "Choose mark of motorbike:",
 
@@ -113,12 +110,9 @@ Use /start to restart bot.
 
         "way": "Choose a convenient payment method for yourself:",
 
-        "category": "Choose motorcycle type:",
-
         "pay_link": "Your payment link.\n❗️<b><u>Warning</u></b>❗️ The link is valid for 24 hours.\nReplenishment can take from 1 minute to several hours (in the case of BTC or LTC).",
 
         "balance": "💰Top up",
-
 
         "pay_confirm": "👌 Your payment has been successfully credited!",
 
@@ -140,7 +134,7 @@ Use /start to restart bot.
 
         'incorrect input': "Incorrect input!",
 
-        'order_text': '📎Your order',
+        'order_text': 'Your motorbike🏍',
 
         'funds': 'Insufficient funds',
 
@@ -148,7 +142,8 @@ Use /start to restart bot.
 
         'about': 'ℹ️About us',
 
-        'about_descr': '''ffff''',
+        'about_descr': '''This is a test online store implemented in a telegram bot. Here we "trade" motorcycles
+(but ​​in reality, these are only pictures of motorcycles, but shhh!😉)''',
 
         'Expired': 'Unfortunately, a promo has been expired 😞',
 

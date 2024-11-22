@@ -5,7 +5,7 @@ import aiohttp
 from loguru import logger
 
 from config import CLOUD_TOKEN, SHOP_ID, MANAGER
-from crud import db_api
+from crud import users, payments
 from utils import bot_send_message, get_text, balance_replenished
 
 
@@ -36,7 +36,7 @@ async def create_invoice(amount):
 
 @logger.catch
 async def crypto_cloud_balance_updater():
-    unpaid_invoices = await db_api.get_cryptocloud_unpaid_invoices()
+    unpaid_invoices = await payments.get_cryptocloud_unpaid_invoices()
     invoice_ids = [invoice for invoice in unpaid_invoices if invoice is not None]
 
     url = "https://api.cryptocloud.plus/v2/invoice/merchant/info"
@@ -66,18 +66,17 @@ async def process_balance_update(invoice):
         currency = invoice['currency']['code']
         amount_currency = invoice['amount_paid']
         amount_usd = invoice['amount_paid_usd']
-        payment_info = await db_api.get_payment_info_by_uuid(uuid)
+        payment_info = await payments.get_payment_info_by_uuid(uuid)
         tg_id = payment_info.tg_id
-        # amount = payment_info.amount
 
-        await db_api.confirm_cryptocloud_payment(uuid)
+        await payments.confirm_cryptocloud_payment(uuid)
 
-        user_info = await db_api.get_user(tg_id)
+        user_info = await users.get_user(tg_id)
         username = user_info.username
         balance = float(user_info.balance)
         current_language = user_info.language
         new_balance = balance + float(amount_usd)
-        await db_api.update_user_balance(tg_id, new_balance)
+        await users.update_user_balance(tg_id, new_balance)
         logger.warning(f'User {tg_id}: payment_id: {uuid}, start_balance: {balance}, payment_amount: {amount_usd}, new_balance: {new_balance}, status: SUCCESS')
         text = get_text('pay_confirm', current_language)
         mess = balance_replenished(amount_usd, current_language)

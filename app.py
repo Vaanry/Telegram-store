@@ -15,7 +15,7 @@ scheduler = AsyncIOScheduler()
 
 def set_scheduled_jobs(scheduler):
     logger.info("Добавляем задачу start_promo в планировщик")
-    scheduler.add_job(start_promo, trigger='cron', hour=6, minute=1, day_of_week='fri', misfire_grace_time=3600 * 6)
+    scheduler.add_job(start_promo, trigger='cron', hour=12, minute=30, day_of_week='thu', misfire_grace_time=3600 * 6)
     logger.info(f"Текущее время: {datetime.now()}")
 
 

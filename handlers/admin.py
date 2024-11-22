@@ -8,7 +8,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 
 from app import dp
 from filters import IsAdmin
-from crud import db_api
+from crud import admins, users
 from utils import process_users, bot_send_message, process_orders
 from keyboards import (cancel_message, confirm_message, mass_letters, users_log, add_cat, admin_markup,
                        confirm_markup, cancel_markup, user_balance, user_orders)
@@ -75,7 +75,7 @@ async def set_usd_amount(message: Message, state: FSMContext):
         async with state.proxy() as data:
             data['amount'] = float(message.text)
             username = data['username']
-        user_info = await db_api.get_user_by_username(username)
+        user_info = await users.get_user_by_username(username)
         if user_info:
             async with state.proxy() as data:
                 data['tg_id'] = user_info.tg_id
@@ -101,7 +101,7 @@ async def admin_update_user_balance(message: Message, state: FSMContext):
         balance = data['balance']
         amount = data['amount']
     new_balance = balance + amount
-    await db_api.update_user_balance(tg_id, new_balance)
+    await users.update_user_balance(tg_id, new_balance)
     await message.answer('👌Баланс пополнен!', reply_markup=admin_markup)
     await state.finish()
     logger.info(f'User {message.from_user.id} пополнил баланс пользователя {tg_id} на {amount}$.')
@@ -135,10 +135,10 @@ async def submit_send(message: Message, state: FSMContext):
 @logger.catch
 @dp.message_handler(IsAdmin(), text=confirm_message, state=Sending.message_send)
 async def process_send(message: Message, state: FSMContext):
-    users = await db_api.get_all_unblock_users()
+    users_ = await users.get_all_unblock_users()
     mess = await state.get_data('message1')
     mess_text = str(mess['message1'])
-    tasks = [asyncio.create_task(bot_send_message(user.tg_id, mess_text)) for user in users]
+    tasks = [asyncio.create_task(bot_send_message(user.tg_id, mess_text)) for user in users_]
     await asyncio.gather(*tasks)
     await state.finish()
     await message.answer("Сообщение отправлено!", reply_markup=admin_markup)
@@ -148,7 +148,6 @@ async def process_send(message: Message, state: FSMContext):
 @logger.catch
 @dp.message_handler(IsAdmin(), text=users_log)
 async def new_users(message: Message):
-    await CategoryState.title.set()
     await message.answer('Введи промежуток в днях, за который ты хочешь получить отчёт.', reply_markup=cancel_markup)
     await NewUsers.offset_submit.set()
 
@@ -158,8 +157,8 @@ async def new_users(message: Message):
 async def send_new_users(message: Message, state: FSMContext):
     offset = int(message.text)
     await state.finish()
-    users = await db_api.get_new_users(offset)
-    path = await process_users(users)
+    users_ = await admins.get_new_users(offset)
+    path = await process_users(users_)
     text = 'Новые пользователи.'
     async with aiofiles.open(path, 'rb') as file:
         await message.answer_document(document=file)
@@ -178,7 +177,7 @@ async def add_title_category(message: Message):
 @dp.message_handler(IsAdmin(), state=CategoryState.mark)
 async def set_category_title_handler(message: Message, state: FSMContext):
     async with state.proxy() as data:
-        data['country'] = message.text
+        data['mark'] = message.text
     await CategoryState.next()
     await message.answer('Страна-производитель?', reply_markup=cancel_markup)
 
@@ -187,7 +186,7 @@ async def set_category_title_handler(message: Message, state: FSMContext):
 @dp.message_handler(IsAdmin(), state=CategoryState.country)
 async def set_category_title_handler(message: Message, state: FSMContext):
     async with state.proxy() as data:
-        data['mark'] = message.text
+        data['country'] = message.text
     await CategoryState.next()
     await message.answer('Класс мотоцикла?', reply_markup=cancel_markup)
 
@@ -209,7 +208,7 @@ async def set_country_handler(message: Message, state: FSMContext):
         country = data['country']
         mark = data['mark']
         type = data['type']
-    text = f'Добавить товар?\nМарка: {mark}\nСтрана: {country}\nКласс мотоцикла: {type}\nСтрана: {type}\nМодель: {message.text}\n'
+    text = f'Добавить товар?\nМарка: {mark}\nСтрана: {country}\nКласс мотоцикла: {type}\nМодель: {message.text}\n'
     await CategoryState.next()
     await message.answer(text, reply_markup=confirm_markup)
 
@@ -222,13 +221,13 @@ async def process_confirm(message: Message, state: FSMContext):
         country = data['country']
         type = data['type']
         model = data['model']
-    exist = await db_api.get_category(mark)
+    exist = await admins.get_category(mark)
     if exist is None:
-        await db_api.add_category(mark, country)
-    await db_api.add_catalog(mark, type, model)
+        await admins.add_category(mark, country)
+    await admins.add_catalog(mark, type, model)
     await message.answer('👌Товар добавлен!', reply_markup=admin_markup)
     await state.finish()
-    text = f'Марка: {mark}\nСтрана: {country}\nКласс мотоцикла: {type}\nСтрана: {type}\nМодель: {message.text}\n'
+    text = f'\nМарка: {mark}\nСтрана: {country}\nКласс мотоцикла: {type}\nМодель: {model}\n'
     logger.info(f'User {message.from_user.id} добавил категорию: {text}.')
 
 
@@ -243,7 +242,7 @@ async def get_user_orders(message: Message):
 @dp.message_handler(IsAdmin(), state=UserOrders.username)
 async def set_username_orders(message: Message, state: FSMContext):
     username = message.text.replace('@', '', 1)
-    user_orders = await db_api.get_user_orders(username)
+    user_orders = await admins.get_user_orders(username)
     await state.finish()
     if user_orders:
         path = await process_orders(username, user_orders)

@@ -7,7 +7,7 @@ from loguru import logger
 
 
 from utils import get_text, create_invoice
-from crud import db_api
+from crud import catalogs, users, payments
 from app import dp
 
 
@@ -27,11 +27,11 @@ async def process_category_back(callback: CallbackQuery, state: FSMContext):
 @dp.message_handler(regexp='.*Пополнить|.*Top up')
 async def payment(message: Message, state: FSMContext):
     tg_id = message.chat.id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     text = get_text('way', current_language)
     back = get_text('back', current_language)
     keyboard = InlineKeyboardMarkup(row_width=1)
-    button1 = InlineKeyboardButton("☁️CryptoCloud (recomended)", callback_data="CryptoCloud")
+    button1 = InlineKeyboardButton("☁️CryptoCloud", callback_data="CryptoCloud")
     button4 = InlineKeyboardButton(back, callback_data='Back')
     keyboard.add(button1)
     keyboard.add(button4)
@@ -44,7 +44,7 @@ async def payment(message: Message, state: FSMContext):
 async def crypto_cloud_payment(query: CallbackQuery, state: FSMContext):
     tg_id = query.from_user.id
     logger.debug(f'User {tg_id} user_start_payment: CryptoCloud.')
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     text = get_text('count1', current_language)
     back = get_text('back', current_language)
     keyboard = InlineKeyboardMarkup(row_width=1)
@@ -59,7 +59,7 @@ async def crypto_cloud_payment(query: CallbackQuery, state: FSMContext):
 @dp.message_handler(state=Payment.amount)
 async def process_payment(message: Message, state: FSMContext):
     tg_id = message.from_id
-    current_language = await db_api.get_user_language(tg_id)
+    current_language = await users.get_user_language(tg_id)
     try:
         amount = float(message.text)
         if amount < 0:
@@ -73,7 +73,7 @@ async def process_payment(message: Message, state: FSMContext):
 
             link = invoice['result']['link']
             uuid = invoice['result']['uuid']
-            await db_api.add_cryptocloud_payment(tg_id, amount, uuid)
+            await payments.add_cryptocloud_payment(tg_id, amount, uuid)
             text = get_text('pay_link', current_language)
             mess = text + '\n' + link
 

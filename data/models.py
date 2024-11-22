@@ -17,7 +17,6 @@ class Users(Base):
     block_bot = Column(Boolean, default=False)
     orders = relationship("Orders", backref="orders", lazy=True)
     payments = relationship("Payment", backref="payments", lazy=True)
-    logs = relationship("Logs", backref="logs", lazy=True)
     promos = relationship("UsersPromo", backref="user_promos", lazy=True)
 
 
